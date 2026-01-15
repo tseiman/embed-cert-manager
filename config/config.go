@@ -18,25 +18,7 @@ func (c *Config) Load(configPath string) (error) {
 	if files == nil {
 		return fmt.Errorf("File list was empty")
 	}
-/*
-	job := Job{}
-	job.Name = "webserver-cert"
-	
-	job.Ca = Ca{
-		Host:       "https://acme.example",
-		ClientCert: "/etc/ca/client.crt",
-		ClientKey:  "/etc/ca/client.key",
-	}
-	job.Target = Target{
-		CertPath:  "/etc/nginx/cert.pem",
-		KeyPath:   "/etc/nginx/key.pem",
-		DNS:       []string{"example.com"},
-		Email:     "admin@example.com",
-	}
 
-	c.Jobs = append(c.Jobs, job)
-
-*/
 
 
 	var jobs []Job
@@ -49,6 +31,7 @@ func (c *Config) Load(configPath string) (error) {
 	}
 
 	c.Jobs = jobs
+
 
 
 	return nil

@@ -47,7 +47,15 @@ func main() {
 
 
 
-	log.Printf("%v\n", cfg.Jobs[0])
+
+//	for _, job := range cfg.Jobs {
+//		log.Printf("%v\n", job.Target.GetShellVariables(&job))
+//	}
+
+
+	// log.Printf("%v\n", cfg.Jobs)
+
+//	log.Printf("%v\n", uint64(cfg.Jobs[0].Target.Runtime)) 
 
 	
 }
