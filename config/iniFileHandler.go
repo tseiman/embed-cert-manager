@@ -58,6 +58,16 @@ func loadOneJobINI(path string) (*Job) {
 	var j Job
 
 	secJob := iniCfg.Section("job")
+
+	raw := secJob.Key("enabled").String()
+	b, err := strconv.ParseBool(strings.TrimSpace(raw))
+	if err != nil {	
+		log.Printf("ERROR: invalid boolean value for job enable parameter %q: %v, disable DISABLE JOB", raw, err)
+		j.Enabled= false
+		return nil
+	}
+
+
 	j.Name = strings.TrimSpace(secJob.Key("host").String())
 	if j.Name == "" {
 		// Fallback: Dateiname ohne Endung
@@ -66,6 +76,14 @@ func loadOneJobINI(path string) (*Job) {
 		log.Printf("WARNING: <%s> has no 'host' parameter configured in '[job]' section assuming <%s>\n",path,j.Name)
 
 	}
+
+
+	if b == false {
+		log.Printf("INFO: Job <%s> not enabled - skipping", j.Name)
+		return nil
+	}
+
+	j.Enabled=  b
 
 	if err := iniCfg.Section("ca").MapTo(&j.Ca); err != nil {
 		log.Printf("ERROR :%q: map [ca]: %v", path, err)

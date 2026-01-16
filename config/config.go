@@ -24,17 +24,22 @@ func (c *Config) Load(configPath string) (error) {
 	var jobs []Job
 	for _, path := range files {
 		job := loadOneJobINI(path)
-		if job == nil {
-			return nil
+		if job != nil {
+			jobs = append(jobs, *job)
 		}
-		jobs = append(jobs, *job)
+
 	}
 
 	c.Jobs = jobs
 
 
-
 	return nil
 }
 
+func (t *Target) GetCmd(j *Job) (string) { 
+
+	cmd := t.GetShellVariables(j)
+	cmd += t.CSRCommand
+	return cmd
+}
 
