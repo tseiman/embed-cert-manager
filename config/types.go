@@ -11,6 +11,7 @@ type Ca struct {
 	Host 			string 			`ini:"host"`
 	ClientCert 		string 			`ini:"client_cert"`
 	ClientKey 		string 			`ini:"client_key"`
+	ServerCertChain string 			`ini:"server_cert_chain"`
 }
 
 type Target struct {
@@ -41,6 +42,7 @@ type Job struct {
 
 type Config struct {
 	Jobs 			[]Job 
+	ConfPath 		string
 }
 
 

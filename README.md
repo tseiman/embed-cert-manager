@@ -13,6 +13,7 @@ Embedded Certificate Manager will then:
 ## build
 ```
 go get gopkg.in/ini.v1
+go get golang.org/x/crypto/ssh
 go build
 ```
 
