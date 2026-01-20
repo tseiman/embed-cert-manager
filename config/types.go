@@ -12,6 +12,7 @@ type Ca struct {
 	ClientCert 		string 			`ini:"client_cert"`
 	ClientKey 		string 			`ini:"client_key"`
 	ServerCertChain string 			`ini:"server_cert_chain"`
+	EJBCAApiUrl     string          `ini:"ejbca_api_url"`
 }
 
 type Target struct {

@@ -14,6 +14,7 @@ Embedded Certificate Manager will then:
 ```
 go get gopkg.in/ini.v1
 go get golang.org/x/crypto/ssh
+go install github.com/hooklift/gowsdl/cmd/gowsdl@latest
 go build
 ```
 

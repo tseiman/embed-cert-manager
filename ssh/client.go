@@ -65,8 +65,10 @@ func RunSSHCommand(addr, user, keyPath, cmd string) (*SessionReturn, error) {
 	err = session.Run(cmd)
 
 
+
 	log.Println("\n",session.Stdout)
 	log.Println("\n",session.Stderr)
+
 	if err != nil {
 		log.Printf("ERROR SSH : %v",err)
 		return nil, err

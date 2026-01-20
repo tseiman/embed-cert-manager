@@ -9,7 +9,6 @@ import (
 	"github.com/tseiman/embed-cert-manager/config"
 	"github.com/tseiman/embed-cert-manager/ssh"
 	"github.com/tseiman/embed-cert-manager/ejbcaHttpsClient"
-
 )
 
 
@@ -64,36 +63,41 @@ func main() {
 			log.Println("ERROR newMTLSClient")
 			continue
 		}
-
+		if !ejbcaHttpsClient.TestConnection(&job,httpClient) {
+			log.Printf("ERROR cant connect to EJBCA %s\n",job.Ca.Host)
+			continue
+		}
+		log.Println("INFO: Runn SSH");
 
 		certCSR, err :=ssh.RunSSHCommand(job.Name +":" +  strconv.Itoa(job.Target.SSHPort) , job.Target.SSHUser, job.Target.SSHKey, job.Target.GetCmd(&job));
 
 		if err != nil {
-			log.Printf("ERROR job <%s> : %v",job.Name, err )
+			log.Printf("ERROR job <%s> : %v\n",job.Name, err )
 			continue
 		}
 
+		log.Println("INFO: Parsing CSR");
 		if certCSR.ParseCSRFromString() == nil {
 			log.Println("ERROR Parsing CSR output")
 			continue
 		}
 		
 
-/*
-		// Erstmal nur “kann ich verbinden?” testen:
-		// Nimm irgendeinen Endpoint, der bei dir existiert (später EJBCA REST).
-		req, _ := http.NewRequest("GET", baseURL+"/", nil)
-		resp, err := c.Do(req)
-		if err != nil {
-			panic(err)
+
+
+
+
+		log.Println("INFO: Check certificate exists");
+		if ! ejbcaHttpsClient.CheckCertState(&job,httpClient) {
+			log.Printf("INFO: skipping %s\n",job.Name)
+			continue
 		}
-		defer resp.Body.Close()
 
-		body, _ := io.ReadAll(resp.Body)
-		log.Println("HTTP status:", resp.Status)
-		log.Println(string(body))
 
-*/
+log.Println("INFO: not skipping");
+//		ejbcaHttpsClient.RequestCertificate(&job,)
+
+
 
 	}
 

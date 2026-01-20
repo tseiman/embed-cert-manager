@@ -9,12 +9,45 @@ import (
 	"os"
 	"time"
 	"log"
+	"context"
 
 	"github.com/tseiman/embed-cert-manager/config"
 )
 
+/*
+var soapClient *SOAPClient
 
 // func newMTLSClient(clientCertFile, clientKeyFile, serverCAFile, serverName string) (*http.Client, error) {
+*/
+
+func TestConnection(j *config.Job, c *http.Client) bool {
+
+	host := "https://" + j.Ca.Host +"/"
+	log.Printf("INFO: EJBCA test connect to EJBCA %s ... ", host)
+	// Erstmal nur “kann ich verbinden?” testen:
+	// Nimm irgendeinen Endpoint, der bei dir existiert (später EJBCA REST).
+	req, _ := http.NewRequest("GET", host, nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Printf("ERROR: EJBCA https client - TestConnection %v\n", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+//	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 || resp.StatusCode < 200 {
+		log.Printf("ERROR: EJBCA https client - TestConnection return code %s Not OK\n", resp.Status)
+		return false
+	}
+//	log.Println(string(body))
+
+
+	log.Printf(" %s\n", resp.Status)
+
+	return true
+
+}
+
 
 func NewMTLSClient(j *config.Job) (*http.Client) {
 
@@ -60,37 +93,33 @@ func NewMTLSClient(j *config.Job) (*http.Client) {
 	}
 }
 
+func CheckCertState(j *config.Job, hc *http.Client) bool {
+	ctx := context.Background()
 
-/*
-func main() {
-	// Beispiel: EJBCA host
-	baseURL := "https://pki.tsei.mdn:8443"
-
-	// Pfade anpassen
-	clientCert := "/etc/ejbca-rest/client.crt"
-	clientKey := "/etc/ejbca-rest/client.key"
-	serverCA := "/etc/ejbca-rest/server-ca.crt"
-
-	// serverName muss zum Zertifikat passen (CN/SAN des EJBCA-Servers)
-	serverName := "pki.tsei.mdn"
-
-	c, err := newMTLSClient(clientCert, clientKey, serverCA, serverName)
+	certs, err := FindCertsViaGowsdl(ctx, j, hc, false)
 	if err != nil {
-		panic(err)
+		log.Printf("ERROR: find certs: %v\n", err)
+	    return true
 	}
 
-	// Erstmal nur “kann ich verbinden?” testen:
-	// Nimm irgendeinen Endpoint, der bei dir existiert (später EJBCA REST).
-	req, _ := http.NewRequest("GET", baseURL+"/", nil)
-	resp, err := c.Do(req)
-	if err != nil {
-		panic(err)
+	if len(certs) == 0 {
+	    log.Println("INFO: No certificate found for user -> must enroll/renew")
+	    return true // renew/enroll nötig
 	}
-	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Println("HTTP status:", resp.Status)
-	fmt.Println(string(body))
+	now := time.Now()
+	best := PickBestValidCert(now, certs)
+	if best == nil {
+	    log.Println("INFO: No valid certificate found (all expired/notYetValid?) -> must enroll/renew")
+	    return true
+	}
+
+	if NeedsRenew(now, best, 14*24*time.Hour) {
+	    log.Println("INFO: Certificate exists but is within renewal window -> renew")
+	    return true
+	}
+
+	log.Println("INFO: Certificate exists and is still valid -> no renew")
+	return false
+
 }
-
-*/
