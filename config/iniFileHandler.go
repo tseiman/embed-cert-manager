@@ -96,7 +96,7 @@ func loadOneJobINI(path string) (*Job) {
 
 	// Trimmen der Listen, weil "a, b" sonst " b" enthält
 	//j.Target.SubjectAltName = trimSlice(j.Target.SubjectAltName)
-	j.Target.Finalize() 
+	j.Finalize() 
 
 
 	return &j
@@ -115,14 +115,31 @@ func trimSlice(in []string) []string {
 	return out
 }
 
-func (t *Target) Finalize() {
-    sec := ParseEJBCAValidity(t.RuntimeRaw)
-    t.Runtime = sec
+func (j *Job) Finalize() {
+//    sec := ParseEJBCAValidity(t.RuntimeRaw)
+//    t.Runtime = sec
 
-    sec = ParseEJBCAValidity(t.ChangeBeforeRaw)
-    t.ChangeBefore = sec
+    sec := ParseEJBCAValidity(j.Target.ChangeAfterRaw)
+    j.Target.ChangeAfter = sec
 
-    t.CommandEnvList = extractVars(t.CSRCommand)
+//    j.Target.CommandEnvList = extractVars(j.Target.CSRCommand)
+
+
+
+    if fileExists(j.Ca.CACert) {
+	    data, err := os.ReadFile(j.Ca.CACert)
+		if err != nil {
+			log.Printf("ERROR: Finalize Load CA Certificate, job: %s, from file %s: %v\n",j.Name, j.Ca.CACert, err)
+		} else {
+			log.Printf("INFO: Finalize Load CA Certificate, job: %s: %s\n",j.Name, j.Ca.CACert)
+
+			j.Ca.CACertLoaded = string(data)
+		}
+	
+	} else {
+		log.Printf("WARN: Finalize Load CA Certificate, job: %s, not found %s - SKIPPING !\n",j.Name, j.Ca.CACert)
+	}
+ 
 
 }
 
@@ -274,5 +291,9 @@ func FieldByIniTag(v any, iniName string) (reflect.Value) {
 	return reflect.Value{}
 }
 
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil || !os.IsNotExist(err)
+}
 
 

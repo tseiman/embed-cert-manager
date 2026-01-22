@@ -36,10 +36,20 @@ func (c *Config) Load(configPath string) (error) {
 	return nil
 }
 
-func (t *Target) GetCmd(j *Job) (string) { 
+func (j *Job) GetCSRCmd() (string) { 
 
-	cmd := t.GetShellVariables(j)
-	cmd += t.CSRCommand
+    j.Target.CommandEnvList = extractVars(j.Target.CSRCommand)
+	cmd := j.Target.GetShellVariables(j)
+	cmd += j.Target.CSRCommand
+	return cmd
+}
+
+func (j *Job) GetCertSetCmd() (string) { 
+
+    j.Target.CommandEnvList = extractVars(j.Target.SetCertCommand)
+
+	cmd := j.Target.GetShellVariables(j)
+	cmd += j.Target.SetCertCommand
 	return cmd
 }
 

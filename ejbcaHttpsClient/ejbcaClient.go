@@ -10,7 +10,8 @@ import (
 	"time"
 	"log"
 	"context"
-
+	"encoding/pem"
+	"bytes"
 	"github.com/tseiman/embed-cert-manager/config"
 )
 
@@ -114,7 +115,9 @@ func CheckCertState(j *config.Job, hc *http.Client) bool {
 	    return true
 	}
 
-	if NeedsRenew(now, best, 14*24*time.Hour) {
+//	if NeedsRenew(now, best, 14*24*time.Hour) {
+	if NeedsRenew(now, best, time.Duration(j.Target.ChangeAfter) * time.Second) {
+
 	    log.Println("INFO: Certificate exists but is within renewal window -> renew")
 	    return true
 	}
@@ -123,3 +126,62 @@ func CheckCertState(j *config.Job, hc *http.Client) bool {
 	return false
 
 }
+
+
+func EnrollOrRenewCert(j *config.Job, hc *http.Client, csrPEM []byte) (*x509.Certificate) {
+
+	ctx := GetContext()
+	// ---- Parameter für PKCS10 ----
+	p := Pkcs10Params{
+		Username: j.Name,     // End Entity username (host/device name)
+		Password: j.Ca.Password,         // oft leer erlaubt; sonst End Entity Password / OTP
+		CSRPEM:   csrPEM,     // -----BEGIN CERTIFICATE REQUEST-----
+		
+		// Optional – in vielen Setups leer lassen:
+	//	CertProfile: j.Ca.CertProfile,    	 // z.B. "TLS-Server"
+	//	CAName:      j.Ca.CAName,     		 // z.B. "TseiWebCA"
+	// ResponseType: 	j.Ca.ResponseType,
+	}
+
+	cert, err := Pkcs10RequestViaGowsdl(ctx, j, hc, p)
+	if err != nil {
+		// SOAP / Auth / Profile / CSR Fehler landen hier
+		log.Printf("ERROR: EJBCA pkcs10 enroll failed for %q: %v\n", j.Name, err)
+		return nil
+	}
+
+	// ---- Sanity checks (optional, aber empfohlen) ----
+	if time.Now().After(cert.NotAfter) {
+		log.Printf("ERROR: received certificate already expired (%s)\n", cert.NotAfter)
+		return nil
+	}
+
+	if err := cert.VerifyHostname(j.Name); err != nil {
+		// je nach SAN/DNS Setup evtl. nur warnen
+		log.Printf("WARN: hostname verification failed: %v", err)
+	}
+
+	log.Printf(
+		"INFO: received certificate: CN=%q Serial=%s NotAfter=%s",
+		cert.Subject.CommonName,
+		cert.SerialNumber.String(),
+		cert.NotAfter.Format(time.RFC3339),
+	)
+
+	return cert
+}
+
+
+// cert ist *x509.Certificate
+func CertToPEM(cert *x509.Certificate) ([]byte, error) {
+	var buf bytes.Buffer
+	err := pem.Encode(&buf, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw, // DER
+	})
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+

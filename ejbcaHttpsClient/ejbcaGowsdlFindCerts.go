@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"log"
+//	"log"
 	"net/http"
 
 	"github.com/hooklift/gowsdl/soap"
@@ -17,11 +17,7 @@ import (
 
 
 func FindCertsViaGowsdl(ctx context.Context, j *config.Job,hc *http.Client, onlyValid bool) ([]*x509.Certificate, error) {
-	/* hc, err := NewMTLSClient(j)
-	if err != nil {
-		return nil, err
-	}
-*/
+
 	sc := soap.NewClient(
 		j.Ca.EJBCAApiUrl,
 		soap.WithHTTPClient(hc),
@@ -40,40 +36,27 @@ func FindCertsViaGowsdl(ctx context.Context, j *config.Job,hc *http.Client, only
 	}
 
 	var out []*x509.Certificate
-/*	for _, item := range resp.Return_ {
-		if item == nil {
-			continue
-		}
 
-		c, err := decodeEjbcaCertDataToX509(string(item.CertificateData))
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, c)
+	for _, item := range resp.Return_ {
+	    if item == nil || len(item.CertificateData) == 0 {
+	        continue
+	    }
+	    b := item.CertificateData
+		p := 16
+		if len(b) < p { p = len(b) }
+//		log.Printf("certData len=%d hex=% x text=%.20q", len(b), b[:p], string(b[:p]))
+
+	    c, err := parseEJBCAcertData(item.CertificateData,"FindCertsViaGowsdl")
+	    if err != nil {
+	        return nil, fmt.Errorf("x509 parse: %w", err)
+	    }
+	    out = append(out, c)
 	}
-*/
-for _, item := range resp.Return_ {
-    if item == nil || len(item.CertificateData) == 0 {
-        continue
-    }
-    b := item.CertificateData
-	p := 16
-	if len(b) < p { p = len(b) }
-	log.Printf("certData len=%d hex=% x text=%.20q", len(b), b[:p], string(b[:p]))
-
-    c, err := parseEJBCAcertData(item.CertificateData)
-    if err != nil {
-        return nil, fmt.Errorf("x509 parse: %w", err)
-    }
-    out = append(out, c)
-}
-
-
 
 	return out, nil
 }
 
-func decodeEjbcaCertDataToX509(certData string) (*x509.Certificate, error) {
+func decodeEjbcaCertDataToX509(certData string,caller string) (*x509.Certificate, error) {
 	s := strings.TrimSpace(certData)
 	s = strings.ReplaceAll(s, "\n", "")
 	s = strings.ReplaceAll(s, "\r", "")
@@ -84,7 +67,7 @@ func decodeEjbcaCertDataToX509(certData string) (*x509.Certificate, error) {
 		return nil, fmt.Errorf("base64 decode: %w", err)
 	}
 
-	c, err := parseEJBCAcertData(der)
+	c, err := parseEJBCAcertData(der,caller)
 	if err != nil {
 		return nil, fmt.Errorf("x509 parse: %w", err)
 	}
@@ -109,6 +92,3 @@ func ShouldRenewViaGowsdl(ctx context.Context, j *config.Job, hc *http.Client) (
     }
     return false, nil
 }
-
-
-

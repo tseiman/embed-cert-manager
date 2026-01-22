@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"os"
 	"log"
+	"time"
 	"github.com/tseiman/embed-cert-manager/config"
 	"github.com/tseiman/embed-cert-manager/ssh"
 	"github.com/tseiman/embed-cert-manager/ejbcaHttpsClient"
@@ -18,10 +19,13 @@ const (
 
 
 var configPath string;
+var forcePullCert bool;
 
 func initFlags() {
 	flag.StringVar(&configPath, "c", defaultConfigPath, "")
 	flag.StringVar(&configPath, "config", defaultConfigPath, "")
+	flag.BoolVar(&forcePullCert, "f", false, "")
+	flag.BoolVar(&forcePullCert, "force", false, "")
 }
 
 
@@ -32,6 +36,9 @@ func usage() {
 	fmt.Fprintf(os.Stderr,
 		"  -c, --config <path>     Configuration path to read *.conf files from.\n"+
 		"                          (default: %s)\n"+
+		"\n"+
+		"  -f, --force             Force generation and poll of Zertifikate \n"+
+		"                          even it is still valid (default: false)\n"+
 		"\n",
 		defaultConfigPath,
 	)
@@ -69,7 +76,7 @@ func main() {
 		}
 		log.Println("INFO: Runn SSH");
 
-		certCSR, err :=ssh.RunSSHCommand(job.Name +":" +  strconv.Itoa(job.Target.SSHPort) , job.Target.SSHUser, job.Target.SSHKey, job.Target.GetCmd(&job));
+		certCSR, err :=ssh.RunSSHCommand(job.Name +":" +  strconv.Itoa(job.Target.SSHPort) , job.Target.SSHUser, job.Target.SSHKey, job.GetCSRCmd());
 
 		if err != nil {
 			log.Printf("ERROR job <%s> : %v\n",job.Name, err )
@@ -84,23 +91,51 @@ func main() {
 		
 
 
-
-
-
 		log.Println("INFO: Check certificate exists");
 		if ! ejbcaHttpsClient.CheckCertState(&job,httpClient) {
-			log.Printf("INFO: skipping %s\n",job.Name)
+			log.Printf("INFO: skipping %s, certificate exists and is valid.\n",job.Name)
+			if !forcePullCert {
+				continue
+			}
+		}
+
+		log.Println("INFO: need to request certificate");
+
+
+
+//		ejbcaHttpsClient.RequestCertificate(&job,)
+		cert := ejbcaHttpsClient.EnrollOrRenewCert(&job, httpClient, []byte(certCSR.CertCSR))
+
+		if cert == nil {
+			log.Printf("ERROR ejbcaHttpsClient\n")
+			continue
+		}
+
+		
+
+		certBytes, err := ejbcaHttpsClient.CertToPEM(cert)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		job.Target.Certificate = (
+			"Subject: "  + cert.Subject.String() + "\n" +
+			"Issuer: "   + cert.Issuer.String()  + "\n" +
+			"NotAfter: " + cert.NotAfter.Format(time.RFC3339) + "\n" +
+			string(certBytes) +
+			"" )
+
+		log.Println("INFO: command:\n",job.GetCertSetCmd())
+
+		_, err2 :=ssh.RunSSHCommand(job.Name +":" +  strconv.Itoa(job.Target.SSHPort) , job.Target.SSHUser, job.Target.SSHKey, job.GetCertSetCmd())
+
+		if err2 != nil {
+			log.Printf("ERROR job <%s> : %v\n",job.Name, err )
 			continue
 		}
 
 
-log.Println("INFO: not skipping");
-//		ejbcaHttpsClient.RequestCertificate(&job,)
-
-
-
 	}
-
 
 
 //	log.Printf("%v\n", uint64(cfg.Jobs[0].Target.Runtime)) 

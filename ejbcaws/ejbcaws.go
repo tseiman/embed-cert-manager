@@ -164,8 +164,8 @@ type CrmfRequestResponse struct {
 }
 
 type CertificateResponse struct {
-	XMLName xml.Name `xml:"http://ws.protocol.core.ejbca.org/ certificateResponse"`
-
+// UPDATED BY TS	XMLName xml.Name `xml:"http://ws.protocol.core.ejbca.org/ certificateResponse"`
+XMLName xml.Name `xml:"return"`
 	Data []byte `xml:"data,omitempty" json:"data,omitempty"`
 
 	ResponseType string `xml:"responseType,omitempty" json:"responseType,omitempty"`
@@ -779,6 +779,7 @@ type UserDataSourceVOWS struct {
 	UserDataVOWS *UserDataVOWS `xml:"userDataVOWS,omitempty" json:"userDataVOWS,omitempty"`
 }
 
+/*
 type Pkcs10Request struct {
 	XMLName xml.Name `xml:"http://ws.protocol.core.ejbca.org/ pkcs10Request"`
 
@@ -791,6 +792,18 @@ type Pkcs10Request struct {
 	Arg3 string `xml:"arg3,omitempty" json:"arg3,omitempty"`
 
 	Arg4 string `xml:"arg4,omitempty" json:"arg4,omitempty"`
+}
+*/
+
+type Pkcs10Request struct {
+	XMLName  xml.Name `xml:"ns1:pkcs10Request"`
+	XmlnsNs1 string   `xml:"xmlns:ns1,attr"`
+
+	Arg3 string `xml:"arg3,omitempty"`
+	Arg2 string `xml:"arg2,omitempty"`
+	Arg4 string `xml:"arg4,omitempty"`
+	Arg1 string `xml:"arg1,omitempty"`
+	Arg0 string `xml:"arg0,omitempty"`
 }
 
 type Pkcs10RequestResponse struct {
