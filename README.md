@@ -55,14 +55,7 @@ The job INI file contains 3 sections: 'job', 'ca', 'target' and has the followin
 | `key_path`       | string | —       | Path to the certificate key to renew on the target system |
 | `csr_path`       | string | —       | wher to store the CSR |
 | `subjectAltName` | string | —       | Have a SAN for the CSR e.g. `DNS:web.domain.tld,DNS:web,IP:1.1.1.1,IP:2.2.2.2` |
-| `change_after`   | string | —       | the time after the certificate should be renewed it uses the EJBCA nomencature 
-- y  = year(s)
-- mo = month(s)
-- d  = day(s)
-- h  = hour(s)
-- m  = minute(s)
-- s  = second(s)
-E.g. `1y 2mo 4d 1h 44m 10s` |
+| `change_after`   | string | —       | the time after the certificate should be renewed it uses the EJBCA nomencature y=year(s), mo=month(s), d=day(s), h=hour(s), m=minute(s),s=second(s) - E.g. `1y 2mo 4d 1h 44m 10s` |
 | `csr_command`    | string | —       | a shel script to create the CSR and to print it to STDOUT the shell scripts can have variables which are referencing to variables in the configuration. the variable is prefixed by the INI section. E.g. the parameter from this job INI file wit the name `key_path` is in the section `target` so the full variable name in the shell script is `target_key_path`. Next to the parameters which are available here in the INI job config file there are also the followimg variables avilable:
 - `target_certificate` = the certificated loaded from the CA 
 - `ca_ca_cert_loaded` = the ca certifcate loaded from the file given in `ca_cert`. 
