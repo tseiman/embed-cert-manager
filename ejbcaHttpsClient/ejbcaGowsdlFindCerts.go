@@ -1,5 +1,19 @@
 package ejbcaHttpsClient
 
+/**
+ *  Copyright (c) 2026 Thomas Schmidt
+ *  SPDX-License-Identifier: MIT 
+ *  home: https://github.com/tseiman/embed-cert-manager/
+ * 
+ *  Tool to check and eventually renew a certificate on an embedded client
+ *  with limited software capabilities.
+ * 
+ *  Package ejbcaHttpsClient implements certificate lookup operations against EJBCA using SOAP (gowsdl).
+ *  It can query existing certificates for a job, decode returned certificate data, and decide
+ *  whether a renewal should be performed.
+ *
+ */
+
 import (
 	"context"
 	"crypto/x509"
@@ -7,7 +21,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-//	"log"
 	"net/http"
 
 	"github.com/hooklift/gowsdl/soap"
@@ -16,6 +29,21 @@ import (
 )
 
 
+/**
+ *  FindCertsViaGowsdl queries EJBCA for certificates related to a job using the generated gowsdl client.
+ *  It calls the EJBCA "findCerts" operation and decodes the returned certificate data into x509 objects.
+ *
+ *  Params:
+ *    - ctx: context controlling cancellation and timeouts for the SOAP call.
+ *    - j: job providing identity and CA endpoint configuration.
+ *    - hc: HTTP client used by the SOAP client (usually mTLS-configured).
+ *    - onlyValid: if true, request only currently valid certificates when supported by the API.
+ *
+ *  Returns:
+ *    - []*x509.Certificate: decoded certificates (may be empty if none exist).
+ *    - error: non-nil if SOAP call or decoding fails.
+ *
+ */
 func FindCertsViaGowsdl(ctx context.Context, j *config.Job,hc *http.Client, onlyValid bool) ([]*x509.Certificate, error) {
 
 	sc := soap.NewClient(
@@ -56,6 +84,19 @@ func FindCertsViaGowsdl(ctx context.Context, j *config.Job,hc *http.Client, only
 	return out, nil
 }
 
+/**
+ *  decodeEjbcaCertDataToX509 decodes certificate data returned by EJBCA into an x509 certificate.
+ *  EJBCA responses may contain base64 DER and, in some cases, nested/double base64 encodings.
+ *
+ *  Params:
+ *    - certData: certificate data string returned by EJBCA.
+ *    - caller: label used for diagnostics/logging context.
+ *
+ *  Returns:
+ *    - *x509.Certificate: parsed certificate.
+ *    - error: non-nil if decoding or x509 parsing fails.
+ *
+ */
 func decodeEjbcaCertDataToX509(certData string,caller string) (*x509.Certificate, error) {
 	s := strings.TrimSpace(certData)
 	s = strings.ReplaceAll(s, "\n", "")
@@ -74,6 +115,21 @@ func decodeEjbcaCertDataToX509(certData string,caller string) (*x509.Certificate
 	return c, nil
 }
 
+/**
+ *  ShouldRenewViaGowsdl determines whether a certificate renewal should be performed for a job.
+ *  It retrieves existing certificates from EJBCA, selects the best currently valid certificate,
+ *  and checks whether it is close enough to expiry to require renewal.
+ *
+ *  Params:
+ *    - ctx: context controlling cancellation and timeouts for the SOAP call(s).
+ *    - j: job containing identity and renewal settings.
+ *    - hc: HTTP client used by the SOAP client (usually mTLS-configured).
+ *
+ *  Returns:
+ *    - bool: true if renewal should be performed, false if no renewal is needed.
+ *    - error: non-nil if lookup or decoding fails.
+ *
+ */
 func ShouldRenewViaGowsdl(ctx context.Context, j *config.Job, hc *http.Client) (bool, error) {
     certs, err := FindCertsViaGowsdl(ctx, j, hc, false)
     if err != nil {

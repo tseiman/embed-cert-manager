@@ -1,6 +1,19 @@
 package ssh
 
 
+/**
+ *  Copyright (c) 2026 Thomas Schmidt
+ *  SPDX-License-Identifier: MIT 
+ *  home: https://github.com/tseiman/embed-cert-manager/
+ * 
+ *  Tool to check and eventually renew a certificate on an embedded client
+ *  with limited software capabilities.
+ * 
+ *  Package ssh provides SSH helpers to execute remote commands on target systems
+ *  and capture their output for further processing.
+ *
+ */
+
 import (
 	"log"
 	"os"
@@ -8,20 +21,22 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-/*
-func RunSSHCommand(host string, cmd string) (string, error) {
 
-	log.Printf("-------- CMD on %s -------------", host)
-	log.Println("\n"+cmd)
-	log.Println("------- /CMD ----------")
-	return "", nil
-}
-
-*/
-
-
-
-
+/**
+ *  RunSSHCommand connects to a target via SSH and executes a shell command.
+ *  It captures STDOUT and STDERR and returns them as a SessionReturn.
+ *
+ *  Params:
+ *    - addr: target address in host:port form.
+ *    - user: SSH username.
+ *    - keyPath: path to the private SSH key.
+ *    - cmd: shell command to execute remotely.
+ *
+ *  Returns:
+ *    - *SessionReturn: captured session output.
+ *    - error: non-nil if connection or execution fails.
+ *
+ */
 func RunSSHCommand(addr, user, keyPath, cmd string) (*SessionReturn, error) {
 
 	var sessionRet SessionReturn

@@ -1,5 +1,19 @@
 package ssh
 
+/**
+ *  Copyright (c) 2026 Thomas Schmidt
+ *  SPDX-License-Identifier: MIT 
+ *  home: https://github.com/tseiman/embed-cert-manager/
+ * 
+ *  Tool to check and eventually renew a certificate on an embedded client
+ *  with limited software capabilities.
+ * 
+ *  Package ssh contains helpers for parsing command output returned
+ *  from remote SSH executions.
+ *
+ */
+
+
 import (
 	"log"
 	"bytes"
@@ -21,6 +35,14 @@ var csrTypes = map[string]bool{
 }
 
 
+/**
+ *  ParseCSRFromString extracts a PEM-encoded CSR from the session output.
+ *  The CSR is stored in the SessionReturn and also returned.
+ *
+ *  Returns:
+ *    - *string: CSR PEM text if found, otherwise nil.
+ *
+ */
 func (s *SessionReturn) ParseCSRFromString() *string {
 	rest := s.StdOut.Bytes()
 

@@ -1,5 +1,15 @@
 package main
 
+
+/**
+ * 
+ * Package main provides the Embedded Certificate Manager CLI.
+ * It loads job configurations, checks certificate state via EJBCA, 
+ * and updates certificates on targets via SSH.
+ * 
+ * */
+
+
 import (
 	"flag"
 	"fmt"
@@ -21,6 +31,10 @@ const (
 var configPath string;
 var forcePullCert bool;
 
+
+/**
+ *  initFlags defines and registers command-line flags used by the CLI.
+ * */
 func initFlags() {
 	flag.StringVar(&configPath, "c", defaultConfigPath, "")
 	flag.StringVar(&configPath, "config", defaultConfigPath, "")
@@ -29,7 +43,9 @@ func initFlags() {
 }
 
 
-
+/**
+ *  initFlags defines and registers command-line flags used by the CLI.
+ * */
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 	fmt.Fprintln(os.Stderr, "Options:")
@@ -44,7 +60,11 @@ func usage() {
 	)
 }
 
-
+/**
+ *  main is the CLI entrypoint.
+ * It parses flags, loads configuration/jobs, 
+ * and executes the renewal/update workflow.
+ * */
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 

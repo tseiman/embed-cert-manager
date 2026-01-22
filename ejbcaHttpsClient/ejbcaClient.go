@@ -1,10 +1,23 @@
 package ejbcaHttpsClient
 
 
+/**
+ *  Copyright (c) 2026 Thomas Schmidt
+ *  SPDX-License-Identifier: MIT 
+ *  home: https://github.com/tseiman/embed-cert-manager/
+ * 
+ *  Tool to check and eventually renew a certificate on an embedded client
+ *  with limited software capabilities.
+ * 
+ *  Package ejbcaHttpsClient implements an mTLS-enabled EJBCA SOAP/HTTPS client.
+ *  It handles certificate lookup, enrollment, renewal, and encoding helpers.
+ *
+ */
+
+
 import (
 	"crypto/tls"
 	"crypto/x509"
-//	"io"
 	"net/http"
 	"os"
 	"time"
@@ -15,18 +28,23 @@ import (
 	"github.com/tseiman/embed-cert-manager/config"
 )
 
-/*
-var soapClient *SOAPClient
-
-// func newMTLSClient(clientCertFile, clientKeyFile, serverCAFile, serverName string) (*http.Client, error) {
-*/
-
+/**
+ *  TestConnection checks whether the EJBCA endpoint is reachable using the provided HTTP client.
+ *
+ *  Params:
+ *    - j: job containing CA configuration.
+ *    - c: configured HTTP client.
+ *
+ *  Returns:
+ *    - bool: true if the endpoint is reachable.
+ *
+ */
 func TestConnection(j *config.Job, c *http.Client) bool {
 
 	host := "https://" + j.Ca.Host +"/"
 	log.Printf("INFO: EJBCA test connect to EJBCA %s ... ", host)
-	// Erstmal nur “kann ich verbinden?” testen:
-	// Nimm irgendeinen Endpoint, der bei dir existiert (später EJBCA REST).
+	// tr can I connect ? first
+	// Try some endpoint of EJBCA first - later we use SOAP
 	req, _ := http.NewRequest("GET", host, nil)
 	resp, err := c.Do(req)
 	if err != nil {
@@ -35,32 +53,38 @@ func TestConnection(j *config.Job, c *http.Client) bool {
 	}
 	defer resp.Body.Close()
 
-//	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode > 299 || resp.StatusCode < 200 {
 		log.Printf("ERROR: EJBCA https client - TestConnection return code %s Not OK\n", resp.Status)
 		return false
 	}
-//	log.Println(string(body))
-
 
 	log.Printf(" %s\n", resp.Status)
 
 	return true
-
 }
 
 
+/**
+ *  NewMTLSClient creates an HTTP client configured for mutual TLS authentication
+ *  against the EJBCA API endpoint.
+ *
+ *  Params:
+ *    - j: job containing TLS credential paths.
+ *
+ *  Returns:
+ *    - *http.Client: mTLS-configured HTTP client.
+ *
+ */
 func NewMTLSClient(j *config.Job) (*http.Client) {
 
-	// 1) Client-Zertifikat laden
-//	cert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
+	// 1) load Client-Certificate
 	cert, err := tls.LoadX509KeyPair(j.Ca.ClientCert, j.Ca.ClientKey)
 	if err != nil {
 		log.Printf("ERROR: EJBCA https client - load client cert/key %v\n",  err)
 		return nil
 	}
 
-	// 2) CA-Pool für Server-Validierung laden
+	// 2) load CA-Pool for Server-Validation
 	caPem, err := os.ReadFile(j.Ca.ServerCertChain)
 	if err != nil {
 		log.Printf("ERROR: EJBCA https client - read server CA file %v\n",  err)
@@ -76,11 +100,11 @@ func NewMTLSClient(j *config.Job) (*http.Client) {
 		MinVersion: tls.VersionTLS12,
 		Certificates: []tls.Certificate{cert},
 
-		// Wichtig: damit validierst du das Server-Zertifikat sauber gegen deine CA
+		// Important: with this we validate the server certificate against my CA
 		RootCAs: caPool,
 
-		// Optional/oft nötig: wenn die URL ein IP/anderer Hostname ist,
-		// aber das Zertifikat auf einen bestimmten Namen ausgestellt ist.
+		// Optional often used if the URL contains an IP or dfferent host name
+		// but the certificate was issued on a specific host
 		ServerName: j.Ca.Host,
 	}
 
@@ -94,6 +118,18 @@ func NewMTLSClient(j *config.Job) (*http.Client) {
 	}
 }
 
+
+/**
+ *  CheckCertState checks whether a valid certificate already exists on the CA.
+ *
+ *  Params:
+ *    - j: job defining the certificate identity.
+ *    - hc: mTLS-configured HTTP client.
+ *
+ *  Returns:
+ *    - bool: true if a valid certificate exists and renewal is not required.
+ *
+ */
 func CheckCertState(j *config.Job, hc *http.Client) bool {
 	ctx := context.Background()
 
@@ -115,7 +151,6 @@ func CheckCertState(j *config.Job, hc *http.Client) bool {
 	    return true
 	}
 
-//	if NeedsRenew(now, best, 14*24*time.Hour) {
 	if NeedsRenew(now, best, time.Duration(j.Target.ChangeAfter) * time.Second) {
 
 	    log.Println("INFO: Certificate exists but is within renewal window -> renew")
@@ -127,11 +162,22 @@ func CheckCertState(j *config.Job, hc *http.Client) bool {
 
 }
 
-
+/**
+ *  EnrollOrRenewCert enrolls or renews a certificate using the provided CSR.
+ *
+ *  Params:
+ *    - j: job providing CA and end-entity configuration.
+ *    - hc: mTLS-configured HTTP client.
+ *    - csrPEM: CSR in PEM format.
+ *
+ *  Returns:
+ *    - *x509.Certificate: issued certificate.
+ *
+ */
 func EnrollOrRenewCert(j *config.Job, hc *http.Client, csrPEM []byte) (*x509.Certificate) {
 
 	ctx := GetContext()
-	// ---- Parameter für PKCS10 ----
+	// ---- Parameters for PKCS10 ----
 	p := Pkcs10Params{
 		Username: j.Name,     // End Entity username (host/device name)
 		Password: j.Ca.Password,         // oft leer erlaubt; sonst End Entity Password / OTP
@@ -172,7 +218,17 @@ func EnrollOrRenewCert(j *config.Job, hc *http.Client, csrPEM []byte) (*x509.Cer
 }
 
 
-// cert ist *x509.Certificate
+/**
+ *  CertToPEM encodes an x509 certificate into PEM format.
+ *
+ *  Params:
+ *    - cert: certificate to encode.
+ *
+ *  Returns:
+ *    - []byte: PEM-encoded certificate.
+ *    - error: non-nil if encoding fails.
+ *
+ */
 func CertToPEM(cert *x509.Certificate) ([]byte, error) {
 	var buf bytes.Buffer
 	err := pem.Encode(&buf, &pem.Block{

@@ -1,5 +1,19 @@
 package config
 
+/**
+ *  Copyright (c) 2026 Thomas Schmidt
+ *  SPDX-License-Identifier: MIT 
+ *  home: https://github.com/tseiman/embed-cert-manager/
+ * 
+ *  Tool to check and eventually renew a certificate on an embedded client
+ *  with limited software capabilities.
+ * 
+ *  Package config implements INI job discovery/loading and variable expansion.
+ *  It maps INI keys into strongly-typed structs and prepares environment variables
+ *  for shell execution on target systems.
+ *
+ */
+
 import (
 	"log"
 	"os"
@@ -11,7 +25,16 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-
+/**
+ *  getFiles returns all *.conf files in the given directory (non-recursive).
+ *
+ *  Params:
+ *    - dir: directory to scan.
+ *
+ *  Returns:
+ *    - []string: full paths of discovered *.conf files.
+ *
+ */
 func (c *Config) getFiles(dir string) ([]string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -30,8 +53,6 @@ func (c *Config) getFiles(dir string) ([]string) {
 		}
 	}
 
-//	sort.Strings(files)
-
 	if len(files) == 0 {
 		log.Printf("ERROR: no .conf files found in %q", dir)
 		return nil
@@ -42,9 +63,19 @@ func (c *Config) getFiles(dir string) ([]string) {
 }
 
 
-
+/**
+ *  loadOneJobINI loads and parses a single job INI file.
+ *  It maps INI sections and keys into a Job structure.
+ *
+ *  Params:
+ *    - path: filesystem path to the job *.conf file.
+ *
+ *  Returns:
+ *    - *Job: parsed job configuration, or nil if parsing failed.
+ *
+ */
 func loadOneJobINI(path string) (*Job) {
-	// Loose: unbekannte Keys sind ok (praktisch für Kommentare/Altlasten)
+	// Loose: unknown keys are ok (useful for comments and old stuff)
 	// Insensitive: keys case-insensitive
 	iniCfg, err := ini.LoadSources(ini.LoadOptions{
 		Loose:       true,
@@ -70,7 +101,7 @@ func loadOneJobINI(path string) (*Job) {
 
 	j.Name = strings.TrimSpace(secJob.Key("host").String())
 	if j.Name == "" {
-		// Fallback: Dateiname ohne Endung
+		// Fallback: filename without ending
 		base := filepath.Base(path)
 		j.Name = strings.TrimSuffix(base, filepath.Ext(base))
 		log.Printf("WARNING: <%s> has no 'host' parameter configured in '[job]' section assuming <%s>\n",path,j.Name)
@@ -94,7 +125,7 @@ func loadOneJobINI(path string) (*Job) {
 		return nil
 	}
 
-	// Trimmen der Listen, weil "a, b" sonst " b" enthält
+	// trim the list becasue "a, b" would contain " b"
 	//j.Target.SubjectAltName = trimSlice(j.Target.SubjectAltName)
 	j.Finalize() 
 
@@ -103,7 +134,16 @@ func loadOneJobINI(path string) (*Job) {
 }
 
 
-
+/**
+ *  trimSlice trims whitespace from each element and removes empty entries.
+ *
+ *  Params:
+ *    - in: input slice of strings.
+ *
+ *  Returns:
+ *    - []string: cleaned slice.
+ *
+ */
 func trimSlice(in []string) []string {
 	out := make([]string, 0, len(in))
 	for _, s := range in {
@@ -115,15 +155,15 @@ func trimSlice(in []string) []string {
 	return out
 }
 
+/**
+ *  Finalize performs post-processing on a Job after loading.
+ *  It normalizes values, derives computed fields, and performs final adjustments.
+ *
+ */
 func (j *Job) Finalize() {
-//    sec := ParseEJBCAValidity(t.RuntimeRaw)
-//    t.Runtime = sec
 
     sec := ParseEJBCAValidity(j.Target.ChangeAfterRaw)
     j.Target.ChangeAfter = sec
-
-//    j.Target.CommandEnvList = extractVars(j.Target.CSRCommand)
-
 
 
     if fileExists(j.Ca.CACert) {
@@ -143,7 +183,17 @@ func (j *Job) Finalize() {
 
 }
 
-
+/**
+ *  GetShellVariables renders job, CA, and target values into shell-compatible
+ *  environment variable assignments.
+ *
+ *  Params:
+ *    - j: job providing source values.
+ *
+ *  Returns:
+ *    - string: shell variable assignments prefixed by INI section names.
+ *
+ */
 func (t *Target) GetShellVariables(j *Job) (string) {
 
 	result := ""
@@ -163,26 +213,29 @@ func (t *Target) GetShellVariables(j *Job) (string) {
 
 		line := envVar.IniSection + "_" + envVar.IniVariable + "=\"" + value.String() + "\""
 		result += line + "\n"
-//		log.Printf("Adding variable %s\n", line)
-//log.Printf("Adding variable %s_%s=%s\n", envVar.IniSection, envVar.IniVariable, value)
 
 	}
-	
-
     return result
-
 }
 
 
-
-
+/**
+ *  ParseEJBCAValidity parses an EJBCA-style validity string into seconds.
+ *  Supported units: y, mo, d, h, m, s.
+ *
+ *  Params:
+ *    - s: validity string (e.g. "1y 2mo 4d 1h").
+ *
+ *  Returns:
+ *    - uint64: total duration in seconds.
+ *
+ */
 func ParseEJBCAValidity(s string) (uint64) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return 0
 	}
-
-	// Sekunden-Definitionen (wie von dir angenommen)
+	
 	const (
 		secPerMinute = 60
 		secPerHour   = 60 * secPerMinute
@@ -202,7 +255,7 @@ func ParseEJBCAValidity(s string) (uint64) {
 			break
 		}
 
-		// number lesen
+		// number read
 		startNum := i
 		for i < len(s) && unicode.IsDigit(rune(s[i])) {
 			i++
@@ -226,7 +279,7 @@ func ParseEJBCAValidity(s string) (uint64) {
 			return 0
 		}
 
-		// unit lesen (wichtig: "mo" vor "m")
+		// unit read (important: "mo" comes in front of "m")
 		var mul uint64
 		switch {
 		case strings.HasPrefix(s[i:], "mo"):
@@ -252,7 +305,7 @@ func ParseEJBCAValidity(s string) (uint64) {
 			return 0
 		}
 
-		// overflow-sicher addieren
+		// overflow-add securely
 		add := n64 * mul
 		if mul != 0 && add/mul != n64 {
 			log.Printf("overflow computing %d * %d", n64, mul)
@@ -269,7 +322,17 @@ func ParseEJBCAValidity(s string) (uint64) {
 }
 
 
-
+/**
+ *  FieldByIniTag finds a struct field by its ini tag using reflection.
+ *
+ *  Params:
+ *    - v: struct or pointer to struct to inspect.
+ *    - iniName: INI tag name to search for.
+ *
+ *  Returns:
+ *    - reflect.Value: matching field or invalid value if not found.
+ *
+ */
 func FieldByIniTag(v any, iniName string) (reflect.Value) {
 	rv := reflect.ValueOf(v)
 
@@ -291,6 +354,16 @@ func FieldByIniTag(v any, iniName string) (reflect.Value) {
 	return reflect.Value{}
 }
 
+/**
+ *  fileExists reports whether a file exists at the given path.
+ *
+ *  Params:
+ *    - path: filesystem path to test.
+ *
+ *  Returns:
+ *    - bool: true if the file exists.
+ *
+ */
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil || !os.IsNotExist(err)

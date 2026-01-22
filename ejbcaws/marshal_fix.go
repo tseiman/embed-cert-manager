@@ -1,5 +1,17 @@
 package ejbcaws
 
+/**
+ *  Copyright (c) 2026 Thomas Schmidt
+ *  SPDX-License-Identifier: MIT 
+ *  home: https://github.com/tseiman/embed-cert-manager/
+ * 
+ *  Tool to check and eventually renew a certificate on an embedded client
+ *  with limited software capabilities.
+ * 
+ *  Fix code for the auto generated WSDL functions
+ * 
+ * */
+
 import "encoding/xml"
 
 // Fix for EJBCA: elementFormDefault="unqualified" + expected arg order arg1, arg0.

@@ -1,20 +1,44 @@
 package ejbcaHttpsClient
 
+/**
+ *  Copyright (c) 2026 Thomas Schmidt
+ *  SPDX-License-Identifier: MIT 
+ *  home: https://github.com/tseiman/embed-cert-manager/
+ * 
+ *  Tool to check and eventually renew a certificate on an embedded client
+ *  with limited software capabilities.
+ * 
+ *  Package ejbcaHttpsClient contains parsing and selection helpers for certificate material returned by EJBCA.
+ *  It supports parsing DER and base64-encoded certificate data and provides helper logic for
+ *  choosing the best valid certificate and deciding whether renewal is needed.
+ *
+ */
+
 import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-// "os"
 	"log"
 	"strings"
 	"bytes"
 	"time"
-
-//	"github.com/fullsailor/pkcs7"
-// "github.com/smallstep/pkcs7"
 )
 
 
+/**
+ *  parseEJBCAcertData parses certificate data returned by EJBCA into an x509 certificate.
+ *  It attempts multiple decoding strategies commonly seen in EJBCA responses, including:
+ *  raw DER, base64(DER), and robust trimming of extra bytes around ASN.1 data.
+ *
+ *  Params:
+ *    - b: raw certificate data bytes (DER or base64-encoded).
+ *    - caller: label used for diagnostics/logging context.
+ *
+ *  Returns:
+ *    - *x509.Certificate: parsed certificate.
+ *    - error: non-nil if decoding/parsing fails.
+ *
+ */
 func parseEJBCAcertData(b []byte, caller string) (*x509.Certificate, error) {
 	b = bytes.TrimSpace(b)
 	if len(b) == 0 {
@@ -47,9 +71,6 @@ func parseEJBCAcertData(b []byte, caller string) (*x509.Certificate, error) {
 
 		if len(decoded) > 0 && decoded[0] == 0x30 {
 
-		    // dump
-		//    _ = os.WriteFile(fmt.Sprintf("ejbca_pass_%s_%d_%d.bin", caller, XCNT, i), decoded, 0644)
-
 		    c, errCert := x509.ParseCertificate(decoded)
 		    if errCert == nil {
 		        return c, nil
@@ -63,6 +84,19 @@ func parseEJBCAcertData(b []byte, caller string) (*x509.Certificate, error) {
 	return nil, fmt.Errorf("could not obtain DER from certificateData (may be malformed)")
 }
 
+/**
+ *  PickBestValidCert selects the best currently valid certificate from a list of candidates.
+ *  It evaluates validity at the provided point in time and typically prefers the certificate
+ *  with the latest expiration (NotAfter) among valid candidates.
+ *
+ *  Params:
+ *    - now: time used to evaluate certificate validity.
+ *    - certs: candidate certificates.
+ *
+ *  Returns:
+ *    - *x509.Certificate: best valid certificate, or nil if none are valid.
+ *
+ */
 func PickBestValidCert(now time.Time, certs []*x509.Certificate) *x509.Certificate {
 	var best *x509.Certificate
 	for _, c := range certs {
@@ -76,17 +110,21 @@ func PickBestValidCert(now time.Time, certs []*x509.Certificate) *x509.Certifica
 	return best
 }
 
-// NeedsRenew returns true if cert is nil or expires within changeBefore.
-/* func NeedsRenew(now time.Time, cert *x509.Certificate, changeBefore time.Duration) bool {
-	if cert == nil {
-		return true
-	}
 
-	return cert.NotAfter.Sub(now) <= changeBefore
-}
-*/
-
-
+/**
+ *  NeedsRenew reports whether a certificate should be renewed based on a "changeBefore" window.
+ *  If cert is nil, renewal is required. Otherwise renewal is required when the remaining lifetime
+ *  is less than or equal to changeBefore.
+ *
+ *  Params:
+ *    - now: current time used for comparison.
+ *    - cert: certificate to evaluate (may be nil).
+ *    - changeBefore: renewal window before expiration.
+ *
+ *  Returns:
+ *    - bool: true if renewal should be triggered, false otherwise.
+ *
+ */
 func NeedsRenew(now time.Time, cert *x509.Certificate, changeBefore time.Duration) bool {
 	if cert == nil {
 		log.Printf("cert=nil -> renew needed")
@@ -108,7 +146,19 @@ func NeedsRenew(now time.Time, cert *x509.Certificate, changeBefore time.Duratio
 	return needs
 }
 
-
+/**
+ *  trimToASN1Object attempts to trim input data to a plausible single ASN.1 object.
+ *  This is used as a robustness helper when the input contains whitespace or extra bytes
+ *  around the DER-encoded certificate.
+ *
+ *  Params:
+ *    - b: input bytes.
+ *
+ *  Returns:
+ *    - []byte: trimmed ASN.1 object bytes.
+ *    - error: non-nil if no plausible ASN.1 object could be identified.
+ *
+ */
 func trimToASN1Object(b []byte) ([]byte, error) {
 	if len(b) < 2 || b[0] != 0x30 {
 		return b, fmt.Errorf("not a SEQUENCE / too short")
@@ -153,7 +203,16 @@ func trimToASN1Object(b []byte) ([]byte, error) {
 	return b, nil
 }
 
-
+/**
+ *  humanDur formats a duration into a compact human-readable form (e.g. "1d 2h 3m 4s").
+ *
+ *  Params:
+ *    - d: duration to format.
+ *
+ *  Returns:
+ *    - string: formatted duration string.
+ *
+ */
 func humanDur(d time.Duration) string {
 	neg := d < 0
 	if neg {
