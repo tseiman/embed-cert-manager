@@ -51,7 +51,6 @@ The job INI file contains 3 sections: 'job', 'ca', 'target' and has the followin
 | `ssh_user`       | string | —       | username to use when accessing the target system via SSH |
 | `ssh_port`       | int    | —       | target SSH port |
 | `ssh_key`        | string | —       | File to the private SSH key to be able to connect unattended to the target system |
-
 | `cert_path`      | string | —       | Path to the certificate to renew on the target system |
 | `key_path`       | string | —       | Path to the certificate key to renew on the target system |
 | `csr_path`       | string | —       | wher to store the CSR |
