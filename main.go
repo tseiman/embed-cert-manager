@@ -44,7 +44,7 @@ var forcePullCert bool
 var logLevel string
 var versionFlag bool
 
-var version     = "1.2.3" // per ldflags überschreibbar
+var version     = "<no version set>" // per ldflags überschreibbar
 
 /**
  *  initFlags defines and registers command-line flags used by the CLI.
