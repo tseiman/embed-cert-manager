@@ -15,11 +15,9 @@ package config
 
 
 import (
-	"log"
 	"fmt"
-//	"strings"
 
-//	"gopkg.in/ini.v1"
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 
@@ -32,7 +30,7 @@ import (
  * */
 func (c *Config) Load(configPath string) (error) {
 
-	log.Printf("Loading *.conf files from folder: %s\n", configPath)
+	logger.Infof("Loading *.conf files from folder: %s\n", configPath)
 
 	var files = c.getFiles(configPath)
 

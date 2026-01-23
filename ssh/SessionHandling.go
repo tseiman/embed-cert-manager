@@ -15,10 +15,11 @@ package ssh
 
 
 import (
-	"log"
 	"bytes"
 	"crypto/x509"
 	"encoding/pem"
+
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 
@@ -50,23 +51,23 @@ func (s *SessionReturn) ParseCSRFromString() *string {
 		var block *pem.Block
 		block, rest = pem.Decode(rest)
 		if block == nil {
-			log.Println("no more PEM blocks found in stdout")
+			logger.Warnln("no more PEM blocks found in stdout")
 			break
 		}
 
 		if !csrTypes[block.Type] {
-			log.Printf("ignoring PEM block type %q\n", block.Type)
+			logger.Warnf("ignoring PEM block type %q\n", block.Type)
 			continue
 		}
 
 		csr, err := x509.ParseCertificateRequest(block.Bytes)
 		if err != nil {
-			log.Printf("invalid CSR in PEM block %q: %v\n", block.Type, err)
+			logger.Errorf("invalid CSR in PEM block %q: %v\n", block.Type, err)
 			continue
 		}
 
 		if err := csr.CheckSignature(); err != nil {
-			log.Printf("CSR signature invalid: %v\n", err)
+			logger.Errorf("CSR signature invalid: %v\n", err)
 			continue
 		}
 
@@ -75,7 +76,7 @@ func (s *SessionReturn) ParseCSRFromString() *string {
 			Bytes: block.Bytes,
 		})
 		if pemBytes == nil {
-			log.Println("failed to encode CSR PEM")
+			logger.Errorln("failed to encode CSR PEM")
 			return nil
 		}
 
@@ -88,6 +89,6 @@ func (s *SessionReturn) ParseCSRFromString() *string {
 		return &s.CertCSR
 	}
 
-	log.Println("no valid CSR found in stdout")
+	logger.Errorln("no valid CSR found in stdout")
 	return nil
 }

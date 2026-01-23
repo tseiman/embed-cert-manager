@@ -21,11 +21,11 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"log"
 	"context"
 	"encoding/pem"
 	"bytes"
 	"github.com/tseiman/embed-cert-manager/config"
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 /**
@@ -42,23 +42,23 @@ import (
 func TestConnection(j *config.Job, c *http.Client) bool {
 
 	host := "https://" + j.Ca.Host +"/"
-	log.Printf("INFO: EJBCA test connect to EJBCA %s ... ", host)
+	logger.Infof("EJBCA test connect to EJBCA %s ... ", host)
 	// tr can I connect ? first
 	// Try some endpoint of EJBCA first - later we use SOAP
 	req, _ := http.NewRequest("GET", host, nil)
 	resp, err := c.Do(req)
 	if err != nil {
-		log.Printf("ERROR: EJBCA https client - TestConnection %v\n", err)
+		logger.Errorf("EJBCA https client - TestConnection %v\n", err)
 		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 || resp.StatusCode < 200 {
-		log.Printf("ERROR: EJBCA https client - TestConnection return code %s Not OK\n", resp.Status)
+		logger.Errorf("EJBCA https client - TestConnection return code %s Not OK\n", resp.Status)
 		return false
 	}
 
-	log.Printf(" %s\n", resp.Status)
+	logger.Debugf(" %s\n", resp.Status)
 
 	return true
 }
@@ -80,19 +80,19 @@ func NewMTLSClient(j *config.Job) (*http.Client) {
 	// 1) load Client-Certificate
 	cert, err := tls.LoadX509KeyPair(j.Ca.ClientCert, j.Ca.ClientKey)
 	if err != nil {
-		log.Printf("ERROR: EJBCA https client - load client cert/key %v\n",  err)
+		logger.Errorf("EJBCA https client - load client cert/key %v\n",  err)
 		return nil
 	}
 
 	// 2) load CA-Pool for Server-Validation
 	caPem, err := os.ReadFile(j.Ca.ServerCertChain)
 	if err != nil {
-		log.Printf("ERROR: EJBCA https client - read server CA file %v\n",  err)
+		logger.Errorf("EJBCA https client - read server CA file %v\n",  err)
 		return nil
 	}
 	caPool := x509.NewCertPool()
 	if ok := caPool.AppendCertsFromPEM(caPem); !ok {
-		log.Printf("ERROR: EJBCA https client - append server CA PEM: no certs found\n")
+		logger.Errorf("EJBCA https client - append server CA PEM: no certs found\n")
 		return nil
 	}
 
@@ -135,29 +135,29 @@ func CheckCertState(j *config.Job, hc *http.Client) bool {
 
 	certs, err := FindCertsViaGowsdl(ctx, j, hc, false)
 	if err != nil {
-		log.Printf("ERROR: find certs: %v\n", err)
+		logger.Errorf("find certs: %v\n", err)
 	    return true
 	}
 
 	if len(certs) == 0 {
-	    log.Println("INFO: No certificate found for user -> must enroll/renew")
+	    logger.Infoln("No certificate found for user -> must enroll/renew")
 	    return true // renew/enroll nötig
 	}
 
 	now := time.Now()
 	best := PickBestValidCert(now, certs)
 	if best == nil {
-	    log.Println("INFO: No valid certificate found (all expired/notYetValid?) -> must enroll/renew")
+	    logger.Infoln("No valid certificate found (all expired/notYetValid?) -> must enroll/renew")
 	    return true
 	}
 
 	if NeedsRenew(now, best, time.Duration(j.Target.ChangeAfter) * time.Second) {
 
-	    log.Println("INFO: Certificate exists but is within renewal window -> renew")
+	    logger.Infoln("Certificate exists but is within renewal window -> renew")
 	    return true
 	}
 
-	log.Println("INFO: Certificate exists and is still valid -> no renew")
+	logger.Infoln("Certificate exists and is still valid -> no renew")
 	return false
 
 }
@@ -192,23 +192,23 @@ func EnrollOrRenewCert(j *config.Job, hc *http.Client, csrPEM []byte) (*x509.Cer
 	cert, err := Pkcs10RequestViaGowsdl(ctx, j, hc, p)
 	if err != nil {
 		// SOAP / Auth / Profile / CSR Fehler landen hier
-		log.Printf("ERROR: EJBCA pkcs10 enroll failed for %q: %v\n", j.Name, err)
+		logger.Errorf("EJBCA pkcs10 enroll failed for %q: %v\n", j.Name, err)
 		return nil
 	}
 
 	// ---- Sanity checks (optional, aber empfohlen) ----
 	if time.Now().After(cert.NotAfter) {
-		log.Printf("ERROR: received certificate already expired (%s)\n", cert.NotAfter)
+		logger.Errorf("received certificate already expired (%s)\n", cert.NotAfter)
 		return nil
 	}
 
 	if err := cert.VerifyHostname(j.Name); err != nil {
 		// je nach SAN/DNS Setup evtl. nur warnen
-		log.Printf("WARN: hostname verification failed: %v", err)
+		logger.Warnf("hostname verification failed: %v", err)
 	}
 
-	log.Printf(
-		"INFO: received certificate: CN=%q Serial=%s NotAfter=%s",
+	logger.Infof(
+		"received certificate: CN=%q Serial=%s NotAfter=%s",
 		cert.Subject.CommonName,
 		cert.SerialNumber.String(),
 		cert.NotAfter.Format(time.RFC3339),

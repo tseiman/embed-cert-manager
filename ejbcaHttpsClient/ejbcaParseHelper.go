@@ -18,10 +18,11 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"strings"
 	"bytes"
 	"time"
+
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 
@@ -127,7 +128,7 @@ func PickBestValidCert(now time.Time, certs []*x509.Certificate) *x509.Certifica
  */
 func NeedsRenew(now time.Time, cert *x509.Certificate, changeBefore time.Duration) bool {
 	if cert == nil {
-		log.Printf("cert=nil -> renew needed")
+		logger.Infoln("cert=nil -> renew needed")
 		return true
 	}
 
@@ -135,7 +136,7 @@ func NeedsRenew(now time.Time, cert *x509.Certificate, changeBefore time.Duratio
 	delta := remaining - changeBefore
 	needs := remaining <= changeBefore
 
-	log.Printf("cert remaining=%s (%s), renewBefore=%s (%s), delta=%s (%s), needsRenew=%v, NotAfter=%s",
+	logger.Infof("cert remaining=%s (%s), renewBefore=%s (%s), delta=%s (%s), needsRenew=%v, NotAfter=%s",
 		remaining, humanDur(remaining),
 		changeBefore, humanDur(changeBefore),
 		delta, humanDur(delta),

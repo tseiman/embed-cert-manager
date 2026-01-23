@@ -15,10 +15,10 @@ package ssh
  */
 
 import (
-	"log"
 	"os"
-//	"bytes"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 
@@ -41,11 +41,11 @@ func RunSSHCommand(addr, user, keyPath, cmd string) (*SessionReturn, error) {
 
 	var sessionRet SessionReturn
 
-	log.Printf("Connecting via SSH to:\n")
-	log.Printf("   Address: %s\n",addr)
-	log.Printf("   User: %s\n",user)
-	log.Printf("   keyPath: %s\n",keyPath)
-	log.Printf("   cmd: \n%s\n", cmd)
+	logger.Debugf("Connecting via SSH to:\n")
+	logger.Debugf("   Address: %s\n",addr)
+	logger.Debugf("   User: %s\n",user)
+	logger.Debugf("   keyPath: %s\n",keyPath)
+	logger.Debugf("   cmd: \n%s\n", cmd)
 
 	if _, err := os.Stat(keyPath); err != nil {
 		return nil, err
@@ -81,11 +81,11 @@ func RunSSHCommand(addr, user, keyPath, cmd string) (*SessionReturn, error) {
 
 
 
-	log.Println("\n",session.Stdout)
-	log.Println("\n",session.Stderr)
+	logger.Debugf("\n",session.Stdout)
+	logger.Debugf("\n",session.Stderr)
 
 	if err != nil {
-		log.Printf("ERROR SSH : %v",err)
+		logger.Errorf("SSH: %v",err)
 		return nil, err
 	}
 

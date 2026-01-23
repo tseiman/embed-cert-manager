@@ -15,7 +15,6 @@ package config
  */
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +22,8 @@ import (
 	"unicode"
 	"reflect"
 	"gopkg.in/ini.v1"
+	
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 /**
@@ -38,7 +39,7 @@ import (
 func (c *Config) getFiles(dir string) ([]string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		log.Printf("ERROR: read dir %q: %v", dir, err)
+		logger.Errorf("read dir %q: %v", dir, err)
 		return nil
 	}
 
@@ -48,13 +49,13 @@ func (c *Config) getFiles(dir string) ([]string) {
 			continue
 		}
 		if strings.HasSuffix(strings.ToLower(e.Name()), ".conf") {
-			log.Println("Adding .conf file to queue: ",  filepath.Join(dir, e.Name()));
+			logger.Infoln("Adding .conf file to queue: ",  filepath.Join(dir, e.Name()));
 			files = append(files, filepath.Join(dir, e.Name()))
 		}
 	}
 
 	if len(files) == 0 {
-		log.Printf("ERROR: no .conf files found in %q", dir)
+		logger.Errorf("no .conf files found in %q", dir)
 		return nil
 	}
 
@@ -82,7 +83,7 @@ func loadOneJobINI(path string) (*Job) {
 		Insensitive: true,
 	}, path)
 	if err != nil {
-		log.Printf("parse ini %q: %v", path, err)
+		logger.Infof("parse ini %q: %v", path, err)
 		return nil
 	}
 
@@ -93,7 +94,7 @@ func loadOneJobINI(path string) (*Job) {
 	raw := secJob.Key("enabled").String()
 	b, err := strconv.ParseBool(strings.TrimSpace(raw))
 	if err != nil {	
-		log.Printf("ERROR: invalid boolean value for job enable parameter %q: %v, disable DISABLE JOB", raw, err)
+		logger.Errorf("invalid boolean value for job enable parameter %q: %v, disable DISABLE JOB", raw, err)
 		j.Enabled= false
 		return nil
 	}
@@ -104,24 +105,24 @@ func loadOneJobINI(path string) (*Job) {
 		// Fallback: filename without ending
 		base := filepath.Base(path)
 		j.Name = strings.TrimSuffix(base, filepath.Ext(base))
-		log.Printf("WARNING: <%s> has no 'host' parameter configured in '[job]' section assuming <%s>\n",path,j.Name)
+		logger.Warnf("<%s> has no 'host' parameter configured in '[job]' section assuming <%s>\n",path,j.Name)
 
 	}
 
 
 	if b == false {
-		log.Printf("INFO: Job <%s> not enabled - skipping", j.Name)
+		logger.Infof("Job <%s> not enabled - skipping", j.Name)
 		return nil
 	}
 
 	j.Enabled=  b
 
 	if err := iniCfg.Section("ca").MapTo(&j.Ca); err != nil {
-		log.Printf("ERROR :%q: map [ca]: %v", path, err)
+		logger.Errorf("%q: map [ca]: %v", path, err)
 		return nil
 	}
 	if err := iniCfg.Section("target").MapTo(&j.Target); err != nil {
-		log.Printf("ERROR :%q: map [target]: %v", path, err)
+		logger.Errorf("%q: map [target]: %v", path, err)
 		return nil
 	}
 
@@ -169,15 +170,15 @@ func (j *Job) Finalize() {
     if fileExists(j.Ca.CACert) {
 	    data, err := os.ReadFile(j.Ca.CACert)
 		if err != nil {
-			log.Printf("ERROR: Finalize Load CA Certificate, job: %s, from file %s: %v\n",j.Name, j.Ca.CACert, err)
+			logger.Errorf("Finalize Load CA Certificate, job: %s, from file %s: %v\n",j.Name, j.Ca.CACert, err)
 		} else {
-			log.Printf("INFO: Finalize Load CA Certificate, job: %s: %s\n",j.Name, j.Ca.CACert)
+			logger.Infof("Finalize Load CA Certificate, job: %s: %s\n",j.Name, j.Ca.CACert)
 
 			j.Ca.CACertLoaded = string(data)
 		}
 	
 	} else {
-		log.Printf("WARN: Finalize Load CA Certificate, job: %s, not found %s - SKIPPING !\n",j.Name, j.Ca.CACert)
+		logger.Warnf("Finalize Load CA Certificate, job: %s, not found %s - SKIPPING !\n",j.Name, j.Ca.CACert)
 	}
  
 
@@ -261,12 +262,12 @@ func ParseEJBCAValidity(s string) (uint64) {
 			i++
 		}
 		if startNum == i {
-			log.Printf("expected number at %q", s[startNum:])
+			logger.Errorf("expected number at %q", s[startNum:])
 			return 0
 		}
 		n64, err := strconv.ParseUint(s[startNum:i], 10, 64)
 		if err != nil {
-			log.Printf("invalid number %q: %v", s[startNum:i], err)
+			logger.Errorf("invalid number %q: %v", s[startNum:i], err)
 			return 0
 		}
 
@@ -275,7 +276,7 @@ func ParseEJBCAValidity(s string) (uint64) {
 			i++
 		}
 		if i >= len(s) {
-			log.Printf("missing unit after %d", n64)
+			logger.Errorf("missing unit after %d", n64)
 			return 0
 		}
 
@@ -301,18 +302,18 @@ func ParseEJBCAValidity(s string) (uint64) {
 			mul = 1
 			i += 1
 		default:
-			log.Printf("unknown unit at %q (allowed: y, mo, d, h, m, s)", s[i:])
+			logger.Errorf("unknown unit at %q (allowed: y, mo, d, h, m, s)", s[i:])
 			return 0
 		}
 
 		// overflow-add securely
 		add := n64 * mul
 		if mul != 0 && add/mul != n64 {
-			log.Printf("overflow computing %d * %d", n64, mul)
+			logger.Errorf("overflow computing %d * %d", n64, mul)
 			return 0
 		}
 		if total > ^uint64(0)-add {
-			log.Printf("overflow adding %d", add)
+			logger.Errorf("overflow adding %d", add)
 			return 0
 		}
 		total += add
@@ -350,7 +351,7 @@ func FieldByIniTag(v any, iniName string) (reflect.Value) {
 			return rv.Field(i)
 		}
 	}
-	log.Printf("ERROR: ini tag %q not found", iniName)
+	logger.Errorf("ini tag %q not found", iniName)
 	return reflect.Value{}
 }
 

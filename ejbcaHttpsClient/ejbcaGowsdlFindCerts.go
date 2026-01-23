@@ -72,7 +72,6 @@ func FindCertsViaGowsdl(ctx context.Context, j *config.Job,hc *http.Client, only
 	    b := item.CertificateData
 		p := 16
 		if len(b) < p { p = len(b) }
-//		log.Printf("certData len=%d hex=% x text=%.20q", len(b), b[:p], string(b[:p]))
 
 	    c, err := parseEJBCAcertData(item.CertificateData,"FindCertsViaGowsdl")
 	    if err != nil {

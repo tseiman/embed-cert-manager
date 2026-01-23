@@ -16,8 +16,9 @@ package config
  */
 
 import (
-	"log"
 	"regexp"
+
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 
@@ -50,7 +51,7 @@ func extractVars(s string) []EnvVariable {
 			if len(prefixAndName) == 3 {
 				vars = append(vars, EnvVariable{ShellVariable : name, IniSection : prefixAndName[1] , IniVariable : prefixAndName[2] })
 			} else {
-				log.Printf("ERROR: can't extract variable becasue it seems to have no prefix %s (e.g. target_subjectAltName)", name, prefixAndName)
+				logger.Errorf("can't extract variable becasue it seems to have no prefix %s (e.g. target_subjectAltName)", name, prefixAndName)
 				vars = append(vars, EnvVariable{ShellVariable : ""})
 			}
 

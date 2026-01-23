@@ -21,12 +21,12 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/http"
-	"log"
 
 	"github.com/hooklift/gowsdl/soap"
 
 	"github.com/tseiman/embed-cert-manager/config"
 	"github.com/tseiman/embed-cert-manager/ejbcaws"
+	"github.com/tseiman/embed-cert-manager/logger"
 )
 
 /**
@@ -75,7 +75,7 @@ func Pkcs10RequestViaGowsdl(ctx context.Context, j *config.Job, hc *http.Client,
 	if csrB64 == "" {
 	    return nil, fmt.Errorf("csrB64 is empty")
 	}
-	log.Printf("csrB64 len=%d prefix=%q", len(csrB64), csrB64[:min(16,len(csrB64))])
+	logger.Debugf("csrB64 len=%d prefix=%q", len(csrB64), csrB64[:min(16,len(csrB64))])
 
 	req := &ejbcaws.Pkcs10Request{
 		XmlnsNs1: "http://ws.protocol.core.ejbca.org/",
@@ -139,7 +139,7 @@ func csrPEMToBase64DER(csrPEM []byte) (string, error) {
 	    return "", fmt.Errorf("CSR signature invalid: %w", err)
 	}
 
-	log.Printf("CSR OK: Subject=%s DNSNames=%v IPs=%v SigAlg=%s PubKey=%T",
+	logger.Debugf("CSR OK: Subject=%s DNSNames=%v IPs=%v SigAlg=%s PubKey=%T",
 	    csr.Subject.String(), csr.DNSNames, csr.IPAddresses, csr.SignatureAlgorithm, csr.PublicKey,
 	)
 
