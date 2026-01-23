@@ -32,18 +32,19 @@ import (
 
 
 const (
-	defaultConfigPath = "/etc/embed-cert-manager.d"
-	defaultForceCert = false
-	defaultLogLevel = "warn"
+	defaultConfigPath   = "/etc/embed-cert-manager.d"
+	defaultForceCert    = false
+	defaultLogLevel     = "warn"
+	defaultVersionFlag  = false
+
 )
-
-
 
 var configPath string
 var forcePullCert bool
 var logLevel string
+var versionFlag bool
 
-
+var version     = "1.2.3" // per ldflags überschreibbar
 
 /**
  *  initFlags defines and registers command-line flags used by the CLI.
@@ -53,8 +54,10 @@ func initFlags() {
 	flag.StringVar(&configPath, 	"config", 	defaultConfigPath, 	"")
 	flag.BoolVar  (&forcePullCert, 	"f", 		defaultForceCert, 	"")
 	flag.BoolVar  (&forcePullCert, 	"force", 	defaultForceCert,	"")
-	flag.StringVar(&logLevel, 		"v", 		defaultLogLevel, 	"")
-	flag.StringVar(&logLevel, 		"verbose", 	defaultLogLevel, 	"")
+	flag.BoolVar  (&versionFlag, 	"v", 		defaultVersionFlag,	"")
+	flag.BoolVar  (&versionFlag, 	"version", 	defaultVersionFlag,	"")
+	flag.StringVar(&logLevel, 		"l", 		defaultLogLevel, 	"")
+	flag.StringVar(&logLevel, 		"loglevel", defaultLogLevel, 	"")
 }
 
 
@@ -65,19 +68,27 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 	fmt.Fprintln(os.Stderr, "Options:")
 	fmt.Fprintf(os.Stderr,
-		"  -c, --config  <path>    Configuration path to read *.conf files from.\n"+
-		"                          (default: %s)\n"+
+		"  -c, --config  <path>     Configuration path to read *.conf files from.\n"+
+		"                           (default: %s)\n"+
 		"\n"+
-		"  -f, --force             Force generation and poll of Zertifikate \n"+
-		"                          even it is still valid (default: false)\n"+
+		"  -f, --force              Force generation and poll of Zertifikate \n"+
+		"                           even it is still valid (default: false)\n"+
 		"\n"+
-		"  -v, --verbose <level>   Sets a verbosity level. Default is \"warn\". \n"+
-		"                          Possible level: error | warn | info | debug\n"+
+		"  -l, --loglevel <level>   Sets a verbosity level. Default is \"warn\". \n"+
+		"                           Possible level: error | warn | info | debug\n"+
+		"\n"+
+		"  -v, --version            Prints the version and exits\n"+
 		"\n",
 		defaultConfigPath,
 	)
 }
 
+/*
+func version() {
+	fmt.Fprintf(os.Stderr, "Version: %s,\n\n", os.Args[0])
+	os.Exit(0)
+}
+*/
 /**
  *  main is the CLI entrypoint.
  *  It parses flags and starts the Jobs
@@ -88,6 +99,11 @@ func main() {
 	initFlags()
 	flag.Usage = usage
 	flag.Parse()
+
+	if versionFlag {
+		fmt.Printf("embed-cert-manager: %s  (c) TS 2026\n", version)
+		os.Exit(0)
+	}
 
 
 	switch strings.ToLower(logLevel) {

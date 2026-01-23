@@ -78,7 +78,7 @@ jobs:
 
           # Build into the staged distribution folder
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -trimpath -ldflags "-s -w" \
+            go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" \
             -o "${STAGE}/embed-cert-manager${EXT}" .
 
       - name: Create archive
