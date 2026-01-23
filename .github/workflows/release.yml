@@ -1,0 +1,104 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write  # needed to upload release assets
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install pandoc (for README.html)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
+      - name: Prepare dist folder
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${GITHUB_REF_NAME}"   # tag name, e.g. v0.1.0
+          PKG="embed-cert-manager_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}"
+          STAGE="dist/${PKG}"
+
+          rm -rf dist
+          mkdir -p "${STAGE}"
+
+          # Convert README.md to README.html
+          if [ -f README.md ]; then
+            pandoc README.md -o "${STAGE}/README.html"
+            cp README.md "${STAGE}/README.md"
+          fi
+
+          # Include LICENSE
+          if [ -f LICENSE ]; then
+            cp LICENSE "${STAGE}/LICENSE"
+          elif [ -f LICENSE.txt ]; then
+            cp LICENSE.txt "${STAGE}/LICENSE.txt"
+          fi
+
+          # Include example etc/ folder (if present)
+          if [ -d etc ]; then
+            cp -R etc "${STAGE}/etc"
+          fi
+
+          echo "STAGE=${STAGE}" >> "$GITHUB_ENV"
+          echo "PKG=${PKG}" >> "$GITHUB_ENV"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Build binary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+
+          # Build into the staged distribution folder
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -trimpath -ldflags "-s -w" \
+            -o "${STAGE}/embed-cert-manager${EXT}" .
+
+      - name: Create archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p out
+
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            ARCHIVE="out/${PKG}.zip"
+            (cd "dist" && zip -r "../${ARCHIVE}" "${PKG}")
+          else
+            ARCHIVE="out/${PKG}.tar.gz"
+            (cd "dist" && tar -czf "../${ARCHIVE}" "${PKG}")
+          fi
+
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ARCHIVE }}
