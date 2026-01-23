@@ -69,11 +69,19 @@ Each job INI file contains the sections `job`, `ca`, and `target` and has the fo
 Usage: ./embed-cert-manager [options]
 
 Options:
-  -c, --config <path>     Configuration path to read *.conf files from.
-                          (default: /etc/embed-cert-manager.d)
+  -c, --config  <path>     Configuration path to read *.conf files from.
+                           (default: /etc/embed-cert-manager.d)
 
-  -f, --force             Force generation and poll of Zertifikate
-                          even it is still valid (default: false)
+  -f, --force              Force generation and poll of Zertifikate
+                           even it is still valid (default: false)
+
+  -l, --loglevel <level>   Sets a verbosity level. Default is "warn".
+                           Possible level: error | warn | info | debug
+
+  -h, --help               Prints this help and exit
+
+  -v, --version            Prints the version and exit
+
 ```
 
 ## Development

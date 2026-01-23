@@ -77,7 +77,9 @@ func usage() {
 		"  -l, --loglevel <level>   Sets a verbosity level. Default is \"warn\". \n"+
 		"                           Possible level: error | warn | info | debug\n"+
 		"\n"+
-		"  -v, --version            Prints the version and exits\n"+
+		"  -h, --help               Prints this help and exit\n"+
+		"\n"+
+		"  -v, --version            Prints the version and exit\n"+
 		"\n",
 		defaultConfigPath,
 	)
