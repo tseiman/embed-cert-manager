@@ -13,11 +13,21 @@ Embedded Certificate Manager will then:
 - Upload the certificate to the target host via a script defined in the job INI file
 - The script may also contain a command to restart the target service
 
+## Content
+- [Build](#build)
+- [Configuration](#configuration)
+  - [Job Files](#job-files)
+    - [File Section Job](#job)
+    - [File Section Ca](#ca)
+    - [File Section Target](#target)
+    - [Command parameters](#command-parameters)
+- [Run](#run)
+- [Development](#development)
+
 ## Build
 ```
 go build
 ```
-
 
 ## Configuration
 The default configuration path is `/etc/embed-cert-manager/`. It contains a subdirectory `tls/`, which should include:
@@ -31,13 +41,13 @@ The configuration directory also contains a subfolder `jobs.d`. It should contai
 
 Each job INI file contains the sections `job`, `ca`, and `target` and has the following parameters:
 
-#### `[job]`
+#### File Section `[job]`
 | Key       | Type   | Default | Description |
 |-----------|--------|---------|-------------|
 | `host`    | string | —       | Name of the host to connect to for certificate renewal and part of the CN |
 | `enabled` | bool   | `false` | If set to false, the job is always skipped |
 
-#### `[ca]`
+#### File Section `[ca]`
 | Key       | Type   | Default | Description |
 |--------------|--------|---------|-------------|
 | `host`       | string | —       | Host name of the CA API (EJBCA) |
@@ -48,7 +58,7 @@ Each job INI file contains the sections `job`, `ca`, and `target` and has the fo
 | `ejbca_api_url` | string | -       | URL of the EJBCA SOAP service, typically something like `https://<my-ejbca-host.tld>/ejbca/ejbcaws/ejbcaws` |
 | `password` | string | -       | Password configured in the EJBCA End Entity to authorize certificate issuance for this End Entity |
 
-#### `[target]`
+#### File Section `[target]`
 | Key       | Type   | Default | Description |
 |--------------|--------|---------|-------------|
 | `ssh_user`       | string | —       | Username used to access the target system via SSH |
