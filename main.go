@@ -96,7 +96,6 @@ func version() {
  *  It parses flags and starts the Jobs
  * */
 func main() {
-//	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	initFlags()
 	flag.Usage = usage
@@ -134,7 +133,7 @@ func runJobs() {
 	
 	if cfg.Load(configPath + "/jobs.d") != nil { os.Exit(1) }
 	if len(cfg.Jobs) == 0 {
-		log.Println("No jobs to do - exiting"); 
+		logger.Warnln("No jobs to do - exiting"); 
 		os.Exit(0) 
 	}
 	cfg.ConfPath = configPath
@@ -198,7 +197,7 @@ func runJobs() {
 		// 7.) Convert the cetificate to PEM
 		certBytes, err := ejbcaHttpsClient.CertToPEM(cert)
 		if err != nil {
-			log.Fatal(err)
+			logger.Errorln(err)
 		}
 
 		// 7.) assemble ASCII armored (PEM) certificate 
@@ -213,7 +212,7 @@ func runJobs() {
 		logger.Debugln("setting up SSH command:\n",job.GetCertSetCmd())
 		_, err2 :=ssh.RunSSHCommand(job.Name +":" +  strconv.Itoa(job.Target.SSHPort) , job.Target.SSHUser, job.Target.SSHKey, job.GetCertSetCmd())
 		if err2 != nil {
-			log.Printf("job <%s> : %v\n",job.Name, err )
+			logger.Errorf("job <%s> : %v\n",job.Name, err )
 			continue
 		}
 

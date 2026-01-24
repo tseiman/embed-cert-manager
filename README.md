@@ -59,9 +59,19 @@ Each job INI file contains the sections `job`, `ca`, and `target` and has the fo
 | `csr_path`       | string | —       | Location where the CSR should be stored |
 | `subjectAltName` | string | —       | SANs for the CSR, e.g. `DNS:web.domain.tld,DNS:web,IP:1.1.1.1,IP:2.2.2.2` |
 | `change_after`   | string | —       | Time before certificate expiration when renewal should be triggered. It uses the EJBCA nomenclature:<br>• y=year(s)<br>• mo=month(s)<br>• d=day(s)<br>• h=hour(s)<br>• m=minute(s)<br>• s=second(s)<br>E.g. `1y 2mo 4d 1h 44m 10s` |
-| `csr_command`    | string | —       | Shell script used to create the CSR and print it to STDOUT. The shell script may reference variables derived from the configuration. Variable names are prefixed by the INI section name. For example, the parameter `key_path` in the `target` section is available as `target_key_path` in the script. In addition to the parameters defined in the job INI file, the following variables are also available:<br>• `target_certificate` = certificate loaded from the CA<br>• `ca_ca_cert_loaded` = CA certificate loaded from the file specified in `ca_cert`.<br>Note: The script may be executed as a single line. It is recommended to separate commands using `;` |
-| `set_cert_command`| string | —       | Shell script used to write certificate files to the target system and optionally restart a service. Uses the same variable environment as `csr_command` |
+| `csr_command`    | string | —       | Script used to create the CSR. See section [Command parameters](#command-parameters) |
+| `set_cert_command`| string | —       | Shell script used to write certificate files to the target system and optionally restart a service. Uses the same variable environment as `csr_command`. See section [Command parameters](#command-parameters) |
 
+#### Command parameters
+The shell script may reference variables derived from the configuration. Variable names are prefixed by the INI section name. For example, the parameter `key_path` in the `target` section is available as `target_key_path` in the script. In addition to the parameters defined in the job INI file, the following variables are also available:
+
+- `target_certificate` = certificate loaded from the CA
+- `ca_ca_cert_loaded` = CA certificate loaded from the file specified in `ca_cert`.
+
+Note: Multi line commands need to be enclosed in tripple quote signs - '"""' (see sample files).
+
+**Special requirements for `csr_command`:**
+At the end of the script it needs to print the CSR to STDOUT so the CSR data can be fetched by SSH.
 
 ## Run
 ```

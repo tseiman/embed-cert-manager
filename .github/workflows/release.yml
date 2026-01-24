@@ -49,8 +49,9 @@ jobs:
           # Convert README.md to README.html
           if [ -f README.md ]; then
             pandoc README.md -o "${STAGE}/README.html"
-            cp README.md "${STAGE}/README.md"
+#            cp README.md "${STAGE}/README.md"
           fi
+
 
           # Include LICENSE
           if [ -f LICENSE ]; then
@@ -63,6 +64,14 @@ jobs:
           if [ -d etc ]; then
             cp -R etc "${STAGE}/etc"
           fi
+
+          if [ -f etc/embed-cert-manager/tls/README.md ]; then
+            pandoc etc/embed-cert-manager/tls/README.md -o "${STAGE}/etc/embed-cert-manager/tls/README.html"
+            rm -f ${STAGE}/etc/embed-cert-manager/tls/README.md
+#            cp README.md "${STAGE}/README.md"
+          fi
+
+
 
           echo "STAGE=${STAGE}" >> "$GITHUB_ENV"
           echo "PKG=${PKG}" >> "$GITHUB_ENV"
